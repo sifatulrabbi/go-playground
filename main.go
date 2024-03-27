@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
@@ -27,6 +28,43 @@ func main() {
 	defer disconnectFn()
 	fmt.Println(db.Name())
 
+	var (
+		validUsers         []string
+		invalidUsers       []string
+		updatedInvalidList []string
+		updatedInvalidLen  int
+		prevInvalidLen     int
+		updatedCsv         string
+	)
+	if b, err := os.ReadFile(".cache/valid/valid-user-email-list.csv"); err != nil {
+		log.Fatalln("valid user email list file not found", err)
+	} else {
+		validUsers = strings.Split(string(b), "\n")
+	}
+	if b, err := os.ReadFile(".cache/invalid-users-list.csv"); err != nil {
+		log.Fatalln("invalid user email list file not found", err)
+	} else {
+		invalidUsers = strings.Split(string(b), "\n")
+	}
+
+	prevInvalidLen = len(invalidUsers)
+	for _, e := range invalidUsers {
+		if slices.Contains(validUsers, e) {
+			continue
+		}
+		updatedInvalidList = append(updatedInvalidList, e)
+		updatedCsv += fmt.Sprintf("%s\n", e)
+	}
+	updatedInvalidLen = len(updatedInvalidList)
+
+	if err := os.WriteFile(".cache/valid/valid-user-email-list.csv", []byte(updatedCsv), 0644); err != nil {
+		log.Fatalln("Unable to update file content", err)
+	}
+
+	fmt.Printf("prev length: %d, updated length: %d\n", prevInvalidLen, updatedInvalidLen)
+}
+
+func gatherAndFilterUserEmails(db *mongo.Database) {
 	validCusEmails := ParseCustomsersCSVs().Emails()
 	allCustomers := GetAllUserEmails(db)
 	notPayingCustomers := CustomerList{}
@@ -69,7 +107,9 @@ func main() {
 	if err = os.WriteFile(".cache/invalid-users-list.csv", []byte(invalidUserEmails), 0644); err != nil {
 		log.Fatalln("unable to write file", err)
 	}
+}
 
+func gatherTeamInfoOfTheUsers() {
 	// teams := []Team{}
 	// b, err := os.ReadFile(".cache/team-need-updates.json")
 	// if err != nil {

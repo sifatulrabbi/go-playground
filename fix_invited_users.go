@@ -1,18 +1,22 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Team struct {
-	ID          string       `json:"_id"`
-	Admin       string       `json:"admin"`
-	LicenseInfo LicenseInfo  `json:"licenseInfo"`
-	Members     []TeamMember `json:"members"`
+	ID          primitive.ObjectID `json:"_id"`
+	Admin       primitive.ObjectID `json:"admin"`
+	LicenseInfo LicenseInfo        `json:"licenseInfo"`
+	Members     []TeamMember       `json:"members"`
 }
 
 type TeamMember struct {
-	User     string `json:"user"`
-	Email    string `json:"email"`
-	Fullname string `json:"fullname"`
+	User     primitive.ObjectID `json:"user"`
+	Email    string             `json:"email"`
+	Fullname string             `json:"fullname"`
 	// "Pending" | "Joined" | "Accepted"
 	Status string `json:"status"`
 }
