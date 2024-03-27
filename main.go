@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,42 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalln(err)
+	}
+	uri := os.Getenv("MONGODB_URI")
+	if uri == "" {
+		log.Fatalln("MONGODB_URI env var not found but is required.")
+	}
+	db, disconnectFn := connectToDb(uri)
+	defer disconnectFn()
+	fmt.Println(db.Name())
+
+	teams := []Team{}
+	b, err := os.ReadFile(".cache/team-need-updates.json")
+	if err != nil {
+		log.Fatalln("unable to read file", err)
+	}
+	if err = json.Unmarshal(b, &teams); err != nil {
+		log.Fatalln("unable to parse team data", err)
+	}
+
+	statusList := map[string]string{}
+	wg := sync.WaitGroup{}
+	for _, t := range teams {
+		for _, m := range t.Members {
+			statusList[m.Status] = m.Status
+		}
+		wg.Add(1)
+		go func() {
+			FixInvitedUsers(t)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
 
 func getUser(db *mongo.Database, email string) primitive.M {
 	coll := db.Collection("users")
@@ -60,105 +97,3 @@ func connectToDb(uri string) (*mongo.Database, func()) {
 	db := client.Database("helloscribe-ai")
 	return db, disconnect
 }
-
-func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalln(err)
-	}
-	uri := os.Getenv("MONGODB_URI")
-	if uri == "" {
-		log.Fatalln("MONGODB_URI env var not found but is required.")
-	}
-	db, disconnectFn := connectToDb(uri)
-	defer disconnectFn()
-	fmt.Println(db.Name())
-
-	customers := ParseCustomsersCSVs()
-	fmt.Printf("Total valid users: %d\n", len(customers))
-
-	c := make(chan bson.M)
-	wg := sync.WaitGroup{}
-
-	go func() {
-		wg.Wait()
-		close(c)
-	}()
-
-	for _, cus := range customers[4:10] {
-		if cus.PlanName == "HelloScribe Tier 2" || cus.PlanName == "Premium" {
-			go func() {
-				wg.Add(1)
-				c <- getUserTeamByEmail(db, cus.Email)
-			}()
-		}
-	}
-
-	usersCount := 0
-	teamsNeedUpdates := []bson.M{}
-	for team := range c {
-		usersCount++
-		members := team["members"]
-		if members, ok := members.(primitive.A); ok {
-			for _, m := range members {
-				fmt.Println(m)
-			}
-		}
-		wg.Done()
-	}
-
-	fmt.Printf("total users count: %d. total teams need check: %d\n",
-		usersCount, len(teamsNeedUpdates))
-}
-
-// func deleteDuplicatesFromTogai() {
-// 	// getAllTogaiCustomers()
-//
-// 	customers := ParseCustomsersCSVs()
-// 	togaiCustomers := []TogaiCustomer{}
-// 	customerIds := []string{}
-// 	duplicates := map[string][]string{}
-// 	customersToRemove := []string{}
-//
-// 	fileContent, err := os.ReadFile("all-togai-customers.json")
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-// 	if err = json.Unmarshal(fileContent, &togaiCustomers); err != nil {
-// 		log.Fatalln("unable to parse togai customer info:", err)
-// 	}
-// 	fmt.Printf("Customers need to be removed: %d\n",
-// 		len(togaiCustomers)-len(customers))
-//
-// 	for i := 0; i < len(customers); i++ {
-// 		customerIds = append(customerIds, customers[i].CustomerID)
-// 	}
-//
-// 	for i := 0; i < len(togaiCustomers); i++ {
-// 		tgcus := togaiCustomers[i]
-// 		if _, exist := duplicates[tgcus.PrimaryEmail]; !exist {
-// 			duplicates[tgcus.PrimaryEmail] = []string{tgcus.ID}
-// 		} else {
-// 			duplicates[tgcus.PrimaryEmail] = append(duplicates[tgcus.PrimaryEmail], tgcus.ID)
-// 		}
-// 	}
-// 	fmt.Printf("total unique customers: %d. customers to remove: %d\n",
-// 		len(duplicates), len(togaiCustomers)-len(duplicates))
-//
-// 	for _, cusIds := range duplicates {
-// 		if len(cusIds) < 2 {
-// 			continue
-// 		}
-// 		for i := 0; i < len(cusIds); i++ {
-// 			if !slices.Contains(customerIds, cusIds[i]) {
-// 				customersToRemove = append(customersToRemove, cusIds[i])
-// 			}
-// 		}
-// 	}
-//
-// 	fmt.Printf("customers to remove: %d\n", len(customersToRemove))
-//
-// 	for i := 0; i < len(customersToRemove); i++ {
-// 		tgcus := TogaiCustomer{ID: customersToRemove[i]}
-// 		tgcus.Delete()
-// 	}
-// }
