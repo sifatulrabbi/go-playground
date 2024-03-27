@@ -12,11 +12,29 @@ type Customer struct {
 	CustomerID string `json:"customer_id"`
 }
 
-func ParseCustomsersCSVs() []Customer {
+type CustomerList []Customer
+
+func (cl CustomerList) Emails() []string {
+	emails := []string{}
+	for _, c := range cl {
+		emails = append(emails, c.Email)
+	}
+	return emails
+}
+
+func (cl CustomerList) CusIds() []string {
+	cusIds := []string{}
+	for _, c := range cl {
+		cusIds = append(cusIds, c.CustomerID)
+	}
+	return cusIds
+}
+
+func ParseCustomsersCSVs() CustomerList {
 	lines := []string{}
 	lines = append(lines, readAndParseUsers("paying-users-list.csv")...)
 	lines = append(lines, readAndParseUsers("appsumo-users-list.csv")...)
-	customers := []Customer{}
+	customers := CustomerList{}
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
 		cus := Customer{

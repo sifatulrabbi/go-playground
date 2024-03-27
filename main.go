@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
+	"slices"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
@@ -27,28 +27,73 @@ func main() {
 	defer disconnectFn()
 	fmt.Println(db.Name())
 
-	teams := []Team{}
-	b, err := os.ReadFile(".cache/team-need-updates.json")
-	if err != nil {
-		log.Fatalln("unable to read file", err)
+	validCusEmails := ParseCustomsersCSVs().Emails()
+	allCustomers := GetAllUserEmails(db)
+	notPayingCustomers := CustomerList{}
+	removeQueue := CustomerList{}
+	for _, cus := range allCustomers {
+		if slices.Contains(validCusEmails, cus.Email) {
+			continue
+		}
+		if slices.Contains(notPayingCustomers.Emails(), cus.Email) {
+			continue
+		}
+		notPayingCustomers = append(notPayingCustomers, cus)
+		if cus.PlanName == "" {
+			removeQueue = append(removeQueue, cus)
+		}
 	}
-	if err = json.Unmarshal(b, &teams); err != nil {
-		log.Fatalln("unable to parse team data", err)
+	fmt.Printf("Total user docs found: %d. total not paying users: %d. total removable users: %d\n",
+		len(allCustomers), len(notPayingCustomers), len(removeQueue))
+
+	b, err := json.MarshalIndent(notPayingCustomers, "", "    ")
+	if err != nil {
+		log.Fatalln("Unable to marshal data", err)
+	}
+	if err = os.WriteFile(".cache/not-paying-users.json", b, 0644); err != nil {
+		log.Fatalln("unable to write file", err)
 	}
 
-	statusList := map[string]string{}
-	wg := sync.WaitGroup{}
-	for _, t := range teams {
-		for _, m := range t.Members {
-			statusList[m.Status] = m.Status
-		}
-		wg.Add(1)
-		go func() {
-			FixInvitedUsers(t)
-			wg.Done()
-		}()
+	notPayingUserEmails := ""
+	for _, e := range notPayingCustomers.Emails() {
+		notPayingUserEmails += fmt.Sprintf("%s,\n", e)
 	}
-	wg.Wait()
+	if err = os.WriteFile(".cache/not-paying-users-list.csv", []byte(notPayingUserEmails), 0644); err != nil {
+		log.Fatalln("unable to write file", err)
+	}
+
+	invalidUserEmails := ""
+	for _, e := range removeQueue.Emails() {
+		invalidUserEmails += fmt.Sprintf("%s,\n", e)
+	}
+	if err = os.WriteFile(".cache/invalid-users-list.csv", []byte(invalidUserEmails), 0644); err != nil {
+		log.Fatalln("unable to write file", err)
+	}
+
+	// teams := []Team{}
+	// b, err := os.ReadFile(".cache/team-need-updates.json")
+	// if err != nil {
+	// 	log.Fatalln("unable to read file", err)
+	// }
+	// if err = json.Unmarshal(b, &teams); err != nil {
+	// 	log.Fatalln("unable to parse team data", err)
+	// }
+
+	// FixAnnualUsers(db)
+
+	// statusList := map[string]string{}
+	// wg := sync.WaitGroup{}
+	// for _, t := range teams {
+	// 	for _, m := range t.Members {
+	// 		statusList[m.Status] = m.Status
+	// 	}
+	// 	wg.Add(1)
+	// 	go func() {
+	// 		FixInvitedUsers(t)
+	// 		wg.Done()
+	// 	}()
+	// }
+	// wg.Wait()
 }
 
 func getUser(db *mongo.Database, email string) primitive.M {
