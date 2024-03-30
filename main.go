@@ -26,8 +26,11 @@ func main() {
 	}
 	db, disconnectFn := connectToDb(uri)
 	defer disconnectFn()
-	fmt.Println(db.Name())
 
+	ArchivePrevUser(db)
+}
+
+func findingValidUsers() {
 	var (
 		validUsers         []string
 		invalidUsers       []string
