@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,6 +19,30 @@ type User struct {
 	Email        string             `json:"email"`
 	Fullname     string             `json:"fullname"`
 	Sumoling     bool               `json:"sumoling"`
+}
+
+func FindAndListAllArchivedUsers(db *mongo.Database) {
+	// db.yourCollectionName.find({
+	//   email: { $regex: '^archived__', $options: 'i' }
+	// })
+	// filter := bson.M{"email": bson.M{"$regex": "^archived__", "$options": "i"}}
+	filter := bson.M{"archived": true}
+	cur, err := db.Collection("users").Find(context.TODO(), filter)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	archivedEmails := []string{}
+	for cur.Next(context.TODO()) {
+		user := User{}
+		if err := cur.Decode(&user); err != nil {
+			log.Fatalln("Unable to decode user")
+		}
+		archivedEmails = append(archivedEmails, user.Email)
+	}
+	csvContent := strings.Join(archivedEmails, "\n")
+	if err := os.WriteFile(".cache/archived-users-list.csv", []byte(csvContent), 0644); err != nil {
+		log.Fatalln("Unable to write the file", err)
+	}
 }
 
 func ArchivePrevUser(db *mongo.Database) {

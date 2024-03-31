@@ -27,7 +27,8 @@ func main() {
 	db, disconnectFn := connectToDb(uri)
 	defer disconnectFn()
 
-	ArchivePrevUser(db)
+	// ArchivePrevUser(db)
+	FindAndListAllArchivedUsers(db)
 }
 
 func findingValidUsers() {
