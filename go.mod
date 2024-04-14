@@ -2,10 +2,7 @@ module github.com/sifatulrabbi/go-playground
 
 go 1.22.0
 
-require (
-	github.com/joho/godotenv v1.5.1
-	go.mongodb.org/mongo-driver v1.14.0
-)
+require go.mongodb.org/mongo-driver v1.14.0
 
 require (
 	github.com/golang/snappy v0.0.1 // indirect

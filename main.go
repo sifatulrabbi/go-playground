@@ -24,7 +24,8 @@ func main() {
 	// 	log.Fatalln("MONGODB_URI env var not found but is required.")
 	// }
 
-	ExtractCities()
+	GroupCitiesByCountry()
+	// ExtractCities()
 	// db, disconnectFn := connectToDb(uri)
 	// defer disconnectFn()
 
