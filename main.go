@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,18 +17,20 @@ import (
 )
 
 func main() {
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// uri := os.Getenv("MONGODB_URI")
-	// if uri == "" {
-	// 	log.Fatalln("MONGODB_URI env var not found but is required.")
-	// }
+	if err := godotenv.Load(); err != nil {
+		log.Fatalln(err)
+	}
+	uri := os.Getenv("MONGODB_URI")
+	if uri == "" {
+		log.Fatalln("MONGODB_URI env var not found but is required.")
+	}
+	db, disconnectFn := connectToDb(uri)
+	defer disconnectFn()
 
-	GroupCitiesByCountry()
+	GatherFreeTrialUsers(db)
+
+	// GroupCitiesByCountry()
 	// ExtractCities()
-	// db, disconnectFn := connectToDb(uri)
-	// defer disconnectFn()
 
 	// AutomateLogin()
 
