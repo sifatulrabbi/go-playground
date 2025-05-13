@@ -1,0 +1,54 @@
+Okay, here is a list of the most common and widely used formatting verbs available in Go's `fmt` package, as found in the official documentation. These are used with functions like `fmt.Printf`, `fmt.Sprintf`, `fmt.Fprintf`, etc.
+
+They are typically categorized by the type of data they are used with:
+
+**General:**
+
+*   `%v`: The default format.
+    *   For structs, the fields are printed.
+    *   Arrays and slices are printed as `[v0 v1 v2 ...]`.
+*   `%+v`: Like `%v`, but adds field names for structs.
+*   `%#v`: A Go-syntax representation of the value. Prints structs as `structName{field1: value1, field2: value2, ...}`.
+*   `%T`: Prints the type of the value.
+*   `%%`: A literal percent sign.
+
+**Boolean:**
+
+*   `%t`: Prints `true` or `false`.
+
+**Integer:**
+
+*   `%b`: Base 2 (binary).
+*   `%c`: The character represented by the integer (rune).
+*   `%d`: Base 10 (decimal).
+*   `%o`: Base 8 (octal).
+*   `%x`: Base 16 (hexadecimal), lowercase letters.
+*   `%X`: Base 16 (hexadecimal), uppercase letters.
+*   `%U`: Unicode format: `U+1234` (for runes).
+
+**Floating-point and Complex:**
+
+*   `%e`: Scientific notation, e.g., `-1.234567e+78`.
+*   `%E`: Scientific notation, e.g., `-1.234567E+78`.
+*   `%f`, `%F`: Decimal point, no exponent, e.g., `123.456`. (`%F` is a synonym for `%f`)
+*   `%g`: Use `%e` for large exponents, `%f` otherwise. Precision is the number of significant digits.
+*   `%G`: Use `%E` for large exponents, `%F` otherwise. Precision is the number of significant digits.
+*   `%x`, `%X`: Hexadecimal notation, e.g., `0xc.90fep-2` for `%x`.
+
+**String and Slice:**
+
+*   `%s`: The uninterpreted bytes of the string or slice.
+*   `%q`: A double-quoted string safely escaped with Go syntax.
+*   `%r`: Go-syntax representation of runes within a string or byte slice (as we discussed).
+
+**Pointer:**
+
+*   `%p`: Base 16 notation, with leading `0x`.
+
+**Note on Custom Formatters:**
+
+Some types in Go can define their own formatting by implementing interfaces like `Stringer` (which provides a `String() string` method) or `Formatter` (which provides a `Format(...)` method). When you use verbs like `%v`, `%s`, `%q`, `%x`, or `%X` on such a type, the `fmt` package will often call the type's custom formatting method. `%v` is the primary verb that checks for and uses the `Stringer` interface.
+
+This list covers the standard verbs. You can also combine these verbs with flags (`+`, `-`, `#`, ` `) and specify width and precision to control the output's appearance.
+
+For the absolute, most detailed and official list, always refer to the Go `fmt` package documentation!
