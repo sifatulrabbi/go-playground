@@ -78,8 +78,6 @@ func (c *Client) readPump() {
 
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
-	ticker2 := time.NewTicker(time.Millisecond * 100)
-	start := time.Now()
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -91,9 +89,6 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(ws.PingMessage, nil); err != nil {
 				return
 			}
-
-		case <-ticker2.C:
-			c.send <- fmt.Appendf(nil, "Time till start %.2f seconds\n", time.Now().Sub(start).Seconds())
 
 		case msg, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
