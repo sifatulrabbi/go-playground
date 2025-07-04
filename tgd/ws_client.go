@@ -105,7 +105,7 @@ func (c *Client) writePump() {
 			wsWriter.Write(msg)
 
 			n := len(c.send)
-			for i := 0; i < n; i++ {
+			for range n {
 				wsWriter.Write(newline)
 				wsWriter.Write(<-c.send)
 			}

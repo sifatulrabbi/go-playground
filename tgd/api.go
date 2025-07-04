@@ -1,3 +1,4 @@
+// Package tdg does something
 package tgd
 
 import (
