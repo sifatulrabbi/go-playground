@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
-	"sync"
+	"net/http"
 	"time"
 )
 
-func handleConn(conn net.Conn) {
+func readFromConn(conn net.Conn) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			fmt.Println("Error while closing the connection:", err)
@@ -17,7 +18,7 @@ func handleConn(conn net.Conn) {
 	}()
 
 	addr := conn.RemoteAddr()
-	fmt.Printf("New connection from: %s\n", addr.String())
+	fmt.Printf("Reading from: %s, network: %s\n", addr.String(), addr.Network())
 
 	content := []byte{}
 	buff := make([]byte, 1024)
@@ -39,48 +40,47 @@ func handleConn(conn net.Conn) {
 	fmt.Println("Total bytes read:", len(content))
 }
 
-func mockHTTPServer() {
+func mockHTTPServer(ready chan<- struct{}) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("Hello world!")); err != nil {
+			fmt.Println("Error writing on the HTTP conn:", err)
+		}
+	})
+
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			panic(err)
-		}
-		go handleConn(conn)
+	close(ready)
+
+	if err := http.Serve(listener, mux); err != nil {
+		fmt.Println(err)
 	}
 }
 
 func main() {
-	wg := sync.WaitGroup{}
+	ready := make(chan struct{})
 
-	wg.Add(1)
-	go func() {
-		go mockHTTPServer()
+	go mockHTTPServer(ready)
+	<-ready
 
-		time.Sleep(time.Second * 30)
-		wg.Done()
-	}()
-
-	time.Sleep(time.Second * 2)
-
-	conn, err := net.Dial("tcp", ":8080")
+	addr := ":8080"
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to address: %s | %s\n", addr, err)
 	}
 
-	fmt.Println("connected to:", conn.RemoteAddr())
+	go readFromConn(conn)
 
-	if _, err = conn.Write([]byte("JSON:")); err != nil {
-		fmt.Println("unable to write to the open connection!")
+	sampleGetReqContent := "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"
+
+	if _, err = conn.Write([]byte(sampleGetReqContent)); err != nil {
+		log.Fatalln(err)
 	}
+	fmt.Println("Done writing HTTP request.")
 
-	if err = conn.Close(); err != nil {
-		fmt.Println("Failed to gracefully close the connection.", err)
-	}
-
-	wg.Wait()
+	time.Sleep(time.Second * 30)
 }
